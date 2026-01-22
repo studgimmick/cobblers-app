@@ -1,0 +1,1413 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="description" content="COBBLERS - Analyse moléculaire de cocktails par intelligence artificielle">
+    <meta name="theme-color" content="#C97449">
+    <title>COBBLERS - Analyse Moléculaire</title>
+    
+    <link rel="manifest" href="/manifest.json">
+    <link rel="icon" type="image/png" href="/assets/icons/icon-192x192.png">
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary: #C97449;
+            --primary-dark: #A65D3A;
+            --primary-light: #E8A87C;
+            --bg-cream: #F5F3EF;
+            --bg-light: #FDFCFA;
+            --text-dark: #3E3630;
+            --text-muted: #8B7D6B;
+            --accent-blue: #3498DB;
+            --success: #66BB6A;
+            --border-light: #D7C4B8;
+            --border: #C4B5A8;
+            --shadow-sm: 0 1px 3px rgba(62, 54, 48, 0.08);
+            --shadow-md: 0 4px 6px rgba(62, 54, 48, 0.10);
+            --shadow-lg: 0 10px 20px rgba(62, 54, 48, 0.12);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'IBM Plex Sans', -apple-system, sans-serif;
+            background: var(--bg-cream);
+            color: var(--text-dark);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* ============================================
+           SPLASH SCREEN
+           ============================================ */
+        #splashScreen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--bg-cream);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .aperture-container {
+            width: 120px;
+            height: 120px;
+            position: relative;
+            margin-bottom: 2rem;
+        }
+
+        .aperture {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            animation: apertureRotate 2s ease-in-out;
+        }
+
+        .blade {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            background: var(--primary);
+            clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+            transform-origin: center;
+            animation: bladeOpen 1.5s ease-out forwards;
+        }
+
+        .blade:nth-child(1) { transform: rotate(0deg) translateY(-30px); animation-delay: 0s; }
+        .blade:nth-child(2) { transform: rotate(45deg) translateY(-30px); animation-delay: 0.1s; }
+        .blade:nth-child(3) { transform: rotate(90deg) translateY(-30px); animation-delay: 0.2s; }
+        .blade:nth-child(4) { transform: rotate(135deg) translateY(-30px); animation-delay: 0.3s; }
+        .blade:nth-child(5) { transform: rotate(180deg) translateY(-30px); animation-delay: 0.4s; }
+        .blade:nth-child(6) { transform: rotate(225deg) translateY(-30px); animation-delay: 0.5s; }
+        .blade:nth-child(7) { transform: rotate(270deg) translateY(-30px); animation-delay: 0.6s; }
+        .blade:nth-child(8) { transform: rotate(315deg) translateY(-30px); animation-delay: 0.7s; }
+
+        .center-dot {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 24px;
+            height: 24px;
+            background: var(--text-dark);
+            border-radius: 50%;
+            z-index: 10;
+        }
+
+        @keyframes apertureRotate {
+            0% { transform: rotate(0deg) scale(0.8); opacity: 0; }
+            50% { transform: rotate(180deg) scale(1.05); opacity: 1; }
+            100% { transform: rotate(360deg) scale(1); opacity: 1; }
+        }
+
+        @keyframes bladeOpen {
+            0% { transform: translateY(0) rotate(var(--rotation)); }
+            100% { transform: translateY(-30px) rotate(var(--rotation)); }
+        }
+
+        .splash-logo {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 2.5rem;
+            letter-spacing: 0.15em;
+            color: var(--primary);
+            font-weight: 600;
+            animation: fadeInUp 0.8s ease 0.5s both;
+            margin-bottom: 0.5rem;
+        }
+
+        .splash-tagline {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.75rem;
+            letter-spacing: 0.15em;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            animation: fadeInUp 0.8s ease 0.7s both;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* ============================================
+           HEADER
+           ============================================ */
+        .app-header {
+            background: var(--bg-light);
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: var(--shadow-sm);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .logo-aperture-small {
+            width: 32px;
+            height: 32px;
+            position: relative;
+        }
+
+        .logo-aperture-small .blade {
+            width: 16px;
+            height: 16px;
+            animation: none;
+        }
+
+        .logo-aperture-small .blade:nth-child(1) { transform: rotate(0deg) translateY(-8px); }
+        .logo-aperture-small .blade:nth-child(2) { transform: rotate(45deg) translateY(-8px); }
+        .logo-aperture-small .blade:nth-child(3) { transform: rotate(90deg) translateY(-8px); }
+        .logo-aperture-small .blade:nth-child(4) { transform: rotate(135deg) translateY(-8px); }
+        .logo-aperture-small .blade:nth-child(5) { transform: rotate(180deg) translateY(-8px); }
+        .logo-aperture-small .blade:nth-child(6) { transform: rotate(225deg) translateY(-8px); }
+        .logo-aperture-small .blade:nth-child(7) { transform: rotate(270deg) translateY(-8px); }
+        .logo-aperture-small .blade:nth-child(8) { transform: rotate(315deg) translateY(-8px); }
+
+        .logo-aperture-small .center-dot {
+            width: 8px;
+            height: 8px;
+        }
+
+        .logo-text-header {
+            display: flex;
+            flex-direction: column;
+            gap: 0.1rem;
+        }
+
+        .logo-main {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--primary);
+            letter-spacing: 0.08em;
+        }
+
+        .logo-subtitle {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.6rem;
+            color: var(--text-muted);
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .btn-icon {
+            width: 36px;
+            height: 36px;
+            border: 1px solid var(--border);
+            background: transparent;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+        }
+
+        .btn-icon:hover {
+            background: var(--bg-cream);
+            border-color: var(--primary);
+        }
+
+        /* ============================================
+           MAIN CONTENT
+           ============================================ */
+        .app-main {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+            padding-bottom: 120px;
+        }
+
+        .section-header {
+            margin-bottom: 2rem;
+            border-left: 3px solid var(--primary);
+            padding-left: 1rem;
+        }
+
+        .section-title {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 0.5rem;
+        }
+
+        .section-subtitle {
+            font-size: 1.5rem;
+            font-weight: 400;
+            color: var(--text-dark);
+            line-height: 1.3;
+        }
+
+        /* ============================================
+           CAMERA SECTION
+           ============================================ */
+        .camera-zone {
+            background: var(--bg-light);
+            border: 2px dashed var(--primary);
+            border-radius: 8px;
+            padding: 4rem 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 2rem;
+            position: relative;
+        }
+
+        .camera-zone:hover {
+            border-color: var(--primary-dark);
+            background: white;
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .camera-zone.has-image {
+            padding: 0;
+            border-style: solid;
+        }
+
+        .camera-aperture {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 1.5rem;
+        }
+
+        .camera-aperture .blade {
+            width: 40px;
+            height: 40px;
+            animation: none;
+        }
+
+        .camera-aperture .blade:nth-child(1) { transform: rotate(0deg) translateY(-20px); }
+        .camera-aperture .blade:nth-child(2) { transform: rotate(45deg) translateY(-20px); }
+        .camera-aperture .blade:nth-child(3) { transform: rotate(90deg) translateY(-20px); }
+        .camera-aperture .blade:nth-child(4) { transform: rotate(135deg) translateY(-20px); }
+        .camera-aperture .blade:nth-child(5) { transform: rotate(180deg) translateY(-20px); }
+        .camera-aperture .blade:nth-child(6) { transform: rotate(225deg) translateY(-20px); }
+        .camera-aperture .blade:nth-child(7) { transform: rotate(270deg) translateY(-20px); }
+        .camera-aperture .blade:nth-child(8) { transform: rotate(315deg) translateY(-20px); }
+
+        .camera-aperture .center-dot {
+            width: 16px;
+            height: 16px;
+        }
+
+        .camera-zone:hover .camera-aperture {
+            animation: apertureBreath 2s ease-in-out infinite;
+        }
+
+        @keyframes apertureBreath {
+            0%, 100% { transform: scale(1) rotate(0deg); }
+            50% { transform: scale(1.1) rotate(180deg); }
+        }
+
+        .camera-text {
+            font-size: 1.1rem;
+            color: var(--text-dark);
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+
+        .camera-subtext {
+            font-family: 'IBM Plex Mono', monospace;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            letter-spacing: 0.05em;
+        }
+
+        #imagePreview {
+            width: 100%;
+            max-height: 400px;
+            object-fit: contain;
+            border-radius: 6px;
+        }
+
+        .btn-primary {
+            display: inline-block;
+            padding: 1rem 2.5rem;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.85rem;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: var(--shadow-sm);
+            font-weight: 500;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .loading-state {
+            text-align: center;
+            padding: 3rem 2rem;
+        }
+
+        .loading-aperture {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 2rem;
+            animation: spin 2s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 1rem;
+            color: var(--primary);
+            margin-bottom: 1rem;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+
+        .loading-steps {
+            text-align: left;
+            max-width: 400px;
+            margin: 2rem auto 0;
+        }
+
+        .loading-step {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            background: var(--bg-light);
+            border-radius: 4px;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.8rem;
+            opacity: 0.3;
+            transition: opacity 0.3s;
+        }
+
+        .loading-step.active {
+            opacity: 1;
+        }
+
+        .step-icon {
+            width: 24px;
+            height: 24px;
+            background: var(--text-muted);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            flex-shrink: 0;
+        }
+
+        .loading-step.active .step-icon {
+            background: var(--primary);
+        }
+
+        .loading-step.complete .step-icon {
+            background: var(--success);
+        }
+
+        /* ============================================
+           RESULTS SECTION
+           ============================================ */
+        .data-grid {
+            background: var(--bg-light);
+            border: 1px solid var(--border-light);
+            border-radius: 6px;
+            overflow: hidden;
+            margin-bottom: 3rem;
+        }
+
+        .data-grid-header {
+            background: var(--bg-cream);
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            font-weight: 500;
+        }
+
+        .data-grid-body {
+            padding: 1.5rem;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 1rem;
+        }
+
+        .data-item {
+            border: 1px solid var(--border-light);
+            border-radius: 4px;
+            padding: 1rem;
+            transition: all 0.2s;
+            cursor: pointer;
+            background: white;
+        }
+
+        .data-item:hover {
+            border-color: var(--primary);
+            box-shadow: var(--shadow-md);
+            transform: translateY(-2px);
+        }
+
+        .data-item-label {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.5rem;
+        }
+
+        .data-item-value {
+            font-size: 1rem;
+            font-weight: 500;
+            color: var(--text-dark);
+        }
+
+        .data-item-meta {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.6rem;
+            color: var(--text-muted);
+            margin-top: 0.5rem;
+        }
+
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+            gap: 2rem;
+        }
+
+        .research-card {
+            background: var(--bg-light);
+            border: 1px solid var(--border-light);
+            border-radius: 6px;
+            overflow: hidden;
+            transition: all 0.3s;
+            animation: fadeIn 0.5s ease backwards;
+        }
+
+        .research-card:nth-child(1) { animation-delay: 0.1s; }
+        .research-card:nth-child(2) { animation-delay: 0.2s; }
+        .research-card:nth-child(3) { animation-delay: 0.3s; }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .research-card:hover {
+            box-shadow: var(--shadow-lg);
+            border-color: var(--primary);
+        }
+
+        .card-header {
+            background: linear-gradient(135deg, var(--bg-cream) 0%, var(--bg-light) 100%);
+            border-bottom: 1px solid var(--border);
+            padding: 1.5rem;
+        }
+
+        .card-id {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 0.5rem;
+        }
+
+        .card-title {
+            font-size: 1.4rem;
+            font-weight: 500;
+            color: var(--text-dark);
+            margin-bottom: 0.75rem;
+        }
+
+        .card-meta {
+            display: flex;
+            gap: 1rem;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            flex-wrap: wrap;
+        }
+
+        .meta-badge {
+            background: white;
+            padding: 0.25rem 0.6rem;
+            border-radius: 3px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            border: 1px solid var(--border-light);
+        }
+
+        .card-body {
+            padding: 1.5rem;
+            background: white;
+        }
+
+        .harmony-analysis {
+            background: var(--bg-cream);
+            border-left: 3px solid var(--primary);
+            padding: 1.25rem;
+            margin-bottom: 1.5rem;
+            border-radius: 0 4px 4px 0;
+        }
+
+        .harmony-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 0.75rem;
+        }
+
+        .harmony-label {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            font-weight: 500;
+        }
+
+        .harmony-value {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 1.6rem;
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .harmony-bar-container {
+            height: 4px;
+            background: var(--border-light);
+            border-radius: 2px;
+            overflow: hidden;
+            margin-bottom: 0.5rem;
+        }
+
+        .harmony-bar {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary) 0%, var(--success) 100%);
+            transition: width 1s ease;
+        }
+
+        .harmony-note {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.6rem;
+            color: var(--text-muted);
+        }
+
+        .scientific-section {
+            margin-bottom: 1.5rem;
+        }
+
+        .section-label {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 0.75rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .section-label::before {
+            content: '';
+            width: 3px;
+            height: 12px;
+            background: var(--primary);
+        }
+
+        .scientific-text {
+            font-size: 0.9rem;
+            line-height: 1.7;
+            color: var(--text-dark);
+            font-weight: 300;
+        }
+
+        .molecular-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 0.75rem;
+        }
+
+        .molecular-tag {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.65rem;
+            background: var(--bg-cream);
+            color: var(--text-muted);
+            padding: 0.35rem 0.75rem;
+            border-radius: 3px;
+            border: 1px solid var(--border-light);
+        }
+
+        .molecular-tag.highlight {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .ingredient-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+
+        .ingredient-table thead {
+            border-bottom: 2px solid var(--border);
+        }
+
+        .ingredient-table th {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            font-weight: 500;
+            text-align: left;
+            padding: 0.75rem 0;
+        }
+
+        .ingredient-table td {
+            padding: 0.75rem 0;
+            border-bottom: 1px solid var(--border-light);
+            color: var(--text-dark);
+        }
+
+        .ingredient-table td:last-child {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .protocol-steps {
+            list-style: none;
+            counter-reset: step-counter;
+        }
+
+        .protocol-step {
+            counter-increment: step-counter;
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+
+        .protocol-step::before {
+            content: counter(step-counter);
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            background: var(--bg-cream);
+            width: 24px;
+            height: 24px;
+            border-radius: 3px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            border: 1px solid var(--border-light);
+        }
+
+        /* ============================================
+           BOTTOM NAV
+           ============================================ */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--bg-light);
+            border-top: 1px solid var(--border);
+            padding: 0.75rem 1rem;
+            box-shadow: 0 -2px 10px rgba(62, 54, 48, 0.05);
+            z-index: 90;
+        }
+
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+        }
+
+        .nav-item {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            border-radius: 3px;
+            transition: all 0.2s;
+            border: 1px solid transparent;
+            cursor: pointer;
+            background: transparent;
+        }
+
+        .nav-item.active {
+            color: var(--primary);
+            background: var(--bg-cream);
+            border-color: var(--border);
+        }
+
+        .nav-item:hover {
+            color: var(--primary);
+        }
+
+        /* ============================================
+           HISTORY SECTION
+           ============================================ */
+        .history-grid {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .history-item {
+            background: var(--bg-light);
+            border: 1px solid var(--border-light);
+            border-radius: 6px;
+            padding: 1.25rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .history-item:hover {
+            border-color: var(--primary);
+            box-shadow: var(--shadow-md);
+        }
+
+        .history-date {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 0.75rem;
+        }
+
+        .history-ingredients {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .history-ingredient-tag {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.7rem;
+            background: white;
+            color: var(--text-dark);
+            padding: 0.35rem 0.75rem;
+            border-radius: 3px;
+            border: 1px solid var(--border-light);
+        }
+
+        .history-count {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+        }
+
+        .empty-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            opacity: 0.3;
+        }
+
+        .empty-text {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            letter-spacing: 0.05em;
+        }
+
+        /* ============================================
+           RESPONSIVE
+           ============================================ */
+        @media (max-width: 768px) {
+            .results-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .data-grid-body {
+                grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            }
+
+            .app-main {
+                padding: 1.5rem 1rem;
+            }
+
+            .section-subtitle {
+                font-size: 1.2rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .splash-logo {
+                font-size: 2rem;
+            }
+
+            .logo-main {
+                font-size: 0.9rem;
+            }
+
+            .nav-item {
+                font-size: 0.65rem;
+                padding: 0.4rem 0.8rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Splash Screen -->
+    <div id="splashScreen">
+        <div class="aperture-container">
+            <div class="aperture">
+                <div class="blade"></div>
+                <div class="blade"></div>
+                <div class="blade"></div>
+                <div class="blade"></div>
+                <div class="blade"></div>
+                <div class="blade"></div>
+                <div class="blade"></div>
+                <div class="blade"></div>
+                <div class="center-dot"></div>
+            </div>
+        </div>
+        <div class="splash-logo">COBBLERS</div>
+        <div class="splash-tagline">Analyse Moléculaire</div>
+    </div>
+
+    <!-- Main App -->
+    <div id="mainApp" class="hidden">
+        <!-- Header -->
+        <div class="app-header">
+            <div class="header-logo">
+                <div class="logo-aperture-small">
+                    <div class="aperture">
+                        <div class="blade"></div>
+                        <div class="blade"></div>
+                        <div class="blade"></div>
+                        <div class="blade"></div>
+                        <div class="blade"></div>
+                        <div class="blade"></div>
+                        <div class="blade"></div>
+                        <div class="blade"></div>
+                        <div class="center-dot"></div>
+                    </div>
+                </div>
+                <div class="logo-text-header">
+                    <div class="logo-main">COBBLERS</div>
+                    <div class="logo-subtitle">Analyse Moléculaire</div>
+                </div>
+            </div>
+            <div class="header-actions">
+                <button class="btn-icon" onclick="showSection('history')" title="Historique">📊</button>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="app-main">
+            <!-- Camera Section -->
+            <section id="cameraSection">
+                <div class="section-header">
+                    <div class="section-title">01 / Acquisition</div>
+                    <div class="section-subtitle">Photographier vos ingrédients disponibles</div>
+                </div>
+
+                <input type="file" id="imageInput" accept="image/*" capture="environment" style="display: none;">
+                
+                <div class="camera-zone" id="cameraZone" onclick="document.getElementById('imageInput').click()">
+                    <div id="cameraPlaceholder">
+                        <div class="camera-aperture">
+                            <div class="aperture">
+                                <div class="blade"></div>
+                                <div class="blade"></div>
+                                <div class="blade"></div>
+                                <div class="blade"></div>
+                                <div class="blade"></div>
+                                <div class="blade"></div>
+                                <div class="blade"></div>
+                                <div class="blade"></div>
+                                <div class="center-dot"></div>
+                            </div>
+                        </div>
+                        <div class="camera-text">Capturer votre bar</div>
+                        <div class="camera-subtext">Cliquez pour prendre une photo</div>
+                    </div>
+                    <img id="imagePreview" class="hidden" alt="Photo de vos ingrédients">
+                </div>
+
+                <div style="text-align: center;">
+                    <button class="btn-primary" id="analyzeBtn" onclick="analyzeImage()" disabled>Lancer l'analyse</button>
+                </div>
+
+                <div id="loadingState" class="loading-state hidden">
+                    <div class="loading-aperture">
+                        <div class="aperture">
+                            <div class="blade"></div>
+                            <div class="blade"></div>
+                            <div class="blade"></div>
+                            <div class="blade"></div>
+                            <div class="blade"></div>
+                            <div class="blade"></div>
+                            <div class="blade"></div>
+                            <div class="blade"></div>
+                            <div class="center-dot"></div>
+                        </div>
+                    </div>
+                    <div class="loading-text">Analyse en cours...</div>
+                    <div class="loading-steps">
+                        <div class="loading-step" id="step1">
+                            <div class="step-icon">1</div>
+                            <div>Détection des composés par vision IA</div>
+                        </div>
+                        <div class="loading-step" id="step2">
+                            <div class="step-icon">2</div>
+                            <div>Extraction des profils moléculaires</div>
+                        </div>
+                        <div class="loading-step" id="step3">
+                            <div class="step-icon">3</div>
+                            <div>Calcul des compatibilités</div>
+                        </div>
+                        <div class="loading-step" id="step4">
+                            <div class="step-icon">4</div>
+                            <div>Génération des formulations optimales</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Results Section -->
+            <section id="resultsSection" class="hidden">
+                <div class="section-header">
+                    <div class="section-title">02 / Composés Détectés</div>
+                    <div class="section-subtitle">Identification automatique par vision informatique</div>
+                </div>
+
+                <div class="data-grid">
+                    <div class="data-grid-header">
+                        <span id="ingredientsCount">Résultats d'analyse</span>
+                    </div>
+                    <div class="data-grid-body" id="ingredientsGrid"></div>
+                </div>
+
+                <div class="section-header" style="margin-top: 3rem;">
+                    <div class="section-title">03 / Formulations Optimisées</div>
+                    <div class="section-subtitle">Analyse d'harmonie moléculaire & évaluation de compatibilité</div>
+                </div>
+
+                <div class="results-grid" id="cocktailsGrid"></div>
+
+                <div style="text-align: center; margin-top: 2rem;">
+                    <button class="btn-primary" onclick="resetAnalysis()">Nouvelle analyse</button>
+                </div>
+            </section>
+
+            <!-- History Section -->
+            <section id="historySection" class="hidden">
+                <div class="section-header">
+                    <div class="section-title">Historique</div>
+                    <div class="section-subtitle">Vos analyses précédentes</div>
+                </div>
+
+                <div class="history-grid" id="historyGrid"></div>
+
+                <div id="historyEmpty" class="empty-state">
+                    <div class="empty-icon">📊</div>
+                    <div class="empty-text">Aucune analyse enregistrée</div>
+                </div>
+            </section>
+        </div>
+
+        <!-- Bottom Nav -->
+        <nav class="bottom-nav">
+            <div class="nav-container">
+                <button class="nav-item active" data-section="camera" onclick="showSection('camera')">Analyse</button>
+                <button class="nav-item" data-section="history" onclick="showSection('history')">Historique</button>
+            </div>
+        </nav>
+    </div>
+
+    <script>
+        // Configuration
+        const API_ENDPOINT = 'YOUR_VERCEL_URL_HERE/api/analyze-molecular';
+        
+        let currentImageData = null;
+        let currentResults = null;
+
+        // Hide splash and show app
+        setTimeout(() => {
+            document.getElementById('splashScreen').classList.add('hidden');
+            document.getElementById('mainApp').classList.remove('hidden');
+            loadHistory();
+        }, 2500);
+
+        // Image handling
+        document.getElementById('imageInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    currentImageData = event.target.result;
+                    const preview = document.getElementById('imagePreview');
+                    preview.src = currentImageData;
+                    preview.classList.remove('hidden');
+                    document.getElementById('cameraPlaceholder').classList.add('hidden');
+                    document.getElementById('cameraZone').classList.add('has-image');
+                    document.getElementById('analyzeBtn').disabled = false;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Analyze image
+        async function analyzeImage() {
+            if (!currentImageData) return;
+
+            // Show loading
+            document.getElementById('cameraZone').classList.add('hidden');
+            document.getElementById('analyzeBtn').classList.add('hidden');
+            document.getElementById('loadingState').classList.remove('hidden');
+
+            // Animate steps
+            const steps = ['step1', 'step2', 'step3', 'step4'];
+            for (let i = 0; i < steps.length; i++) {
+                setTimeout(() => {
+                    document.getElementById(steps[i]).classList.add('active');
+                    if (i > 0) {
+                        document.getElementById(steps[i-1]).classList.add('complete');
+                    }
+                }, i * 800);
+            }
+
+            try {
+                const response = await fetch(API_ENDPOINT, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        image: currentImageData
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Analyse failed');
+                }
+
+                const data = await response.json();
+                currentResults = data;
+
+                // Save to history
+                saveToHistory(data);
+
+                // Show results
+                setTimeout(() => {
+                    displayResults(data);
+                }, 3200);
+
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Erreur lors de l\'analyse. Veuillez réessayer.');
+                resetAnalysis();
+            }
+        }
+
+        // Display results
+        function displayResults(data) {
+            // Hide loading
+            document.getElementById('loadingState').classList.add('hidden');
+            document.getElementById('cameraSection').classList.add('hidden');
+            document.getElementById('resultsSection').classList.remove('hidden');
+
+            // Display ingredients
+            const ingredientsGrid = document.getElementById('ingredientsGrid');
+            ingredientsGrid.innerHTML = '';
+            document.getElementById('ingredientsCount').textContent = 
+                `Résultats d'analyse — ${data.ingredients.length} composés identifiés`;
+
+            data.ingredients.forEach(ing => {
+                const div = document.createElement('div');
+                div.className = 'data-item';
+                div.innerHTML = `
+                    <div class="data-item-label">Composé</div>
+                    <div class="data-item-value">${ing.name}</div>
+                    <div class="data-item-meta">${ing.category || 'Détecté'}</div>
+                `;
+                ingredientsGrid.appendChild(div);
+            });
+
+            // Display cocktails
+            const cocktailsGrid = document.getElementById('cocktailsGrid');
+            cocktailsGrid.innerHTML = '';
+
+            data.cocktails.forEach((cocktail, idx) => {
+                const card = document.createElement('div');
+                card.className = 'research-card';
+                card.style.animationDelay = `${idx * 0.1}s`;
+                card.innerHTML = `
+                    <div class="card-header">
+                        <div class="card-id">Formulation ID: ${cocktail.id || 'CKTL-' + (idx + 1).toString().padStart(3, '0')}</div>
+                        <h3 class="card-title">${cocktail.name}</h3>
+                        <div class="card-meta">
+                            <span class="meta-badge">Difficulté: ${cocktail.difficulty || 'Moyenne'}</span>
+                            <span class="meta-badge">Temps: ${cocktail.time || '5 min'}</span>
+                            <span class="meta-badge">Catégorie: ${cocktail.category || 'Classique'}</span>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="harmony-analysis">
+                            <div class="harmony-header">
+                                <div class="harmony-label">Indice d'harmonie moléculaire</div>
+                                <div class="harmony-value">${(cocktail.harmony_score * 100).toFixed(1)}%</div>
+                            </div>
+                            <div class="harmony-bar-container">
+                                <div class="harmony-bar" style="width: ${cocktail.harmony_score * 100}%"></div>
+                            </div>
+                            <div class="harmony-note">Score de compatibilité basé sur les composés aromatiques partagés</div>
+                        </div>
+
+                        <div class="scientific-section">
+                            <div class="section-label">Justification Scientifique</div>
+                            <div class="scientific-text">${cocktail.scientific_rationale}</div>
+                            ${cocktail.key_molecules ? `
+                                <div class="molecular-tags">
+                                    ${cocktail.key_molecules.map((mol, i) => 
+                                        `<span class="molecular-tag ${i < 3 ? 'highlight' : ''}">${mol}</span>`
+                                    ).join('')}
+                                </div>
+                            ` : ''}
+                        </div>
+
+                        <div class="scientific-section">
+                            <div class="section-label">Composants de Formulation</div>
+                            <table class="ingredient-table">
+                                <thead>
+                                    <tr>
+                                        <th>Composant</th>
+                                        <th>Quantité</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${cocktail.ingredients.map(ing => `
+                                        <tr>
+                                            <td>${ing.name}</td>
+                                            <td>${ing.quantity}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="scientific-section">
+                            <div class="section-label">Protocole de Préparation</div>
+                            <ol class="protocol-steps">
+                                ${cocktail.instructions.map(inst => `
+                                    <li class="protocol-step">${inst}</li>
+                                `).join('')}
+                            </ol>
+                        </div>
+                    </div>
+                `;
+                cocktailsGrid.appendChild(card);
+            });
+
+            // Scroll to top
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // Reset analysis
+        function resetAnalysis() {
+            currentImageData = null;
+            currentResults = null;
+            
+            document.getElementById('imagePreview').classList.add('hidden');
+            document.getElementById('imagePreview').src = '';
+            document.getElementById('cameraPlaceholder').classList.remove('hidden');
+            document.getElementById('cameraZone').classList.remove('has-image');
+            document.getElementById('cameraZone').classList.remove('hidden');
+            document.getElementById('analyzeBtn').classList.remove('hidden');
+            document.getElementById('analyzeBtn').disabled = true;
+            document.getElementById('loadingState').classList.add('hidden');
+            document.getElementById('resultsSection').classList.add('hidden');
+            document.getElementById('cameraSection').classList.remove('hidden');
+            document.getElementById('imageInput').value = '';
+
+            // Reset loading steps
+            ['step1', 'step2', 'step3', 'step4'].forEach(id => {
+                document.getElementById(id).classList.remove('active', 'complete');
+            });
+
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // Local storage history (max 20 analyses)
+        function saveToHistory(data) {
+            let history = JSON.parse(localStorage.getItem('cobblers_history') || '[]');
+            history.unshift({
+                timestamp: Date.now(),
+                ingredients: data.ingredients,
+                cocktails: data.cocktails.length
+            });
+            // Keep only last 20
+            history = history.slice(0, 20);
+            localStorage.setItem('cobblers_history', JSON.stringify(history));
+        }
+
+        function loadHistory() {
+            const history = JSON.parse(localStorage.getItem('cobblers_history') || '[]');
+            const historyGrid = document.getElementById('historyGrid');
+            const historyEmpty = document.getElementById('historyEmpty');
+
+            if (history.length === 0) {
+                historyGrid.innerHTML = '';
+                historyEmpty.classList.remove('hidden');
+                return;
+            }
+
+            historyEmpty.classList.add('hidden');
+            historyGrid.innerHTML = '';
+
+            history.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'history-item';
+                const date = new Date(item.timestamp);
+                div.innerHTML = `
+                    <div class="history-date">${date.toLocaleDateString('fr-FR', { 
+                        day: '2-digit', 
+                        month: 'long', 
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    })}</div>
+                    <div class="history-ingredients">
+                        ${item.ingredients.slice(0, 6).map(ing => 
+                            `<span class="history-ingredient-tag">${ing.name}</span>`
+                        ).join('')}
+                        ${item.ingredients.length > 6 ? `<span class="history-ingredient-tag">+${item.ingredients.length - 6}</span>` : ''}
+                    </div>
+                    <div class="history-count">${item.cocktails} formulation${item.cocktails > 1 ? 's' : ''} générée${item.cocktails > 1 ? 's' : ''}</div>
+                `;
+                historyGrid.appendChild(div);
+            });
+        }
+
+        // Section navigation
+        function showSection(section) {
+            // Update nav
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+                if (item.dataset.section === section) {
+                    item.classList.add('active');
+                }
+            });
+
+            // Show section
+            if (section === 'camera') {
+                document.getElementById('cameraSection').classList.remove('hidden');
+                document.getElementById('resultsSection').classList.add('hidden');
+                document.getElementById('historySection').classList.add('hidden');
+            } else if (section === 'history') {
+                document.getElementById('cameraSection').classList.add('hidden');
+                document.getElementById('resultsSection').classList.add('hidden');
+                document.getElementById('historySection').classList.remove('hidden');
+                loadHistory();
+            }
+
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // PWA Install
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+        });
+
+        // Service Worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/service-worker.js')
+                .then(reg => console.log('Service Worker registered'))
+                .catch(err => console.log('Service Worker registration failed'));
+        }
+    </script>
+</body>
+</html>
